@@ -26,7 +26,7 @@ app.add_middleware(
     allow_headers=["Content-Type"],
 )
 
-MAX_CHARS = 5000
+MAX_CHARS = 100000
 RATE_RE = re.compile(r"^[+-]?\d{1,3}%$")
 PITCH_RE = re.compile(r"^[+-]?\d{1,3}Hz$")
 VOLUME_RE = re.compile(r"^[+-]?\d{1,3}%$")
@@ -81,6 +81,40 @@ async def voices():
             raise HTTPException(status_code=502, detail=f"Could not retrieve live voices: {exc}") from exc
 
 
+def split_text(text: str, limit: int = 2500) -> list[str]:
+    # Split at sentence/word boundaries so long scripts are sent in manageable
+    # Edge TTS requests while preserving the original text order.
+    import re
+    sentences = re.split(r'(?<=[.!?。！？])\\s+', text.strip())
+    chunks: list[str] = []
+    current = ""
+    for sentence in sentences:
+        sentence = sentence.strip()
+        if not sentence:
+            continue
+        while len(sentence) > limit:
+            cut = sentence.rfind(" ", 0, limit + 1)
+            if cut < 1:
+                cut = limit
+            piece, sentence = sentence[:cut].strip(), sentence[cut:].strip()
+            if current:
+                chunks.append(current)
+                current = ""
+            if piece:
+                chunks.append(piece)
+        if not sentence:
+            continue
+        candidate = (current + " " + sentence).strip()
+        if len(candidate) > limit and current:
+            chunks.append(current)
+            current = sentence
+        else:
+            current = candidate
+    if current:
+        chunks.append(current)
+    return chunks
+
+
 @app.post("/api/tts")
 async def text_to_speech(payload: SpeechRequest):
     try:
@@ -92,11 +126,17 @@ async def text_to_speech(payload: SpeechRequest):
         temp_path = Path(temp.name)
         temp.close()
         try:
-            communicate = edge_tts.Communicate(
-                payload.text, payload.voice,
-                rate=payload.rate, pitch=payload.pitch, volume=payload.volume,
-            )
-            await communicate.save(str(temp_path))
+            # Edge TTS is called in smaller chunks. MP3 frame streams are
+            # appended in order into one downloadable MP3 file.
+            with temp_path.open("wb") as output:
+                for part in split_text(payload.text):
+                    communicate = edge_tts.Communicate(
+                        part, payload.voice,
+                        rate=payload.rate, pitch=payload.pitch, volume=payload.volume,
+                    )
+                    async for item in communicate.stream():
+                        if item.get("type") == "audio":
+                            output.write(item.get("data", b""))
             if not temp_path.exists() or temp_path.stat().st_size == 0:
                 raise RuntimeError("The speech engine returned an empty audio file.")
             return FileResponse(
