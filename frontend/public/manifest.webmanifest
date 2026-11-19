@@ -1,0 +1,11 @@
+{
+  "name": "VoiceForge AI",
+  "short_name": "VoiceForge",
+  "description": "Natural text-to-speech studio",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#09090f",
+  "theme_color": "#09090f",
+  "icons": [{ "src": "/voiceforge-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
