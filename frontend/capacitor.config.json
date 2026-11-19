@@ -1,0 +1,7 @@
+{
+  "appId": "ai.voiceforge.app",
+  "appName": "VoiceForge AI",
+  "webDir": "dist",
+  "server": { "url": "https://voiceforge-ai-lemon.vercel.app", "cleartext": false },
+  "android": { "allowMixedContent": false }
+}
