@@ -52,3 +52,11 @@ npm run dev
 - Do not submit confidential or sensitive text.
 - VoiceForge AI is independent and is not affiliated with Microsoft or ElevenLabs.
 - FFmpeg is not needed for direct MP3 generation; it can be added for future audio post-processing.
+
+## Desktop and mobile installers
+
+The `.github/workflows/build-apps.yml` workflow builds:
+- Windows x64 installer: `VoiceForge-Setup.exe`
+- Android debug installer: `VoiceForge-Android.apk`
+
+On each push to `main`, GitHub Actions builds both packages and uploads them to the GitHub Release tagged `latest`. The website's **Get the App** buttons point directly to these release assets. The Android APK is an unsigned/debug build intended for testing; a signed release build is required for public distribution. iPhone and iPad use the installable PWA rather than an IPA.
