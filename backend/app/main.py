@@ -15,7 +15,7 @@ from starlette.background import BackgroundTask
 
 app = FastAPI(title="VoiceForge AI API", version="1.0.0")
 
-origins = [item.strip() for item in __import__("os")..getenv(
+origins = [item.strip() for item in __import__("os").getenv(
     "FRONTEND_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173"
 ).split(",") if item.strip()]
 app.add_middleware(
