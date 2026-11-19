@@ -82,10 +82,8 @@ async def voices():
 
 
 def split_text(text: str, limit: int = 2500) -> list[str]:
-    # Split at sentence/word boundaries so long scripts are sent in manageable
-    # Edge TTS requests while preserving the original text order.
-    import re
-    sentences = re.split(r'(?<=[.!?。！？])\\s+', text.strip())
+    """Split narration at sentence/word boundaries without changing its order."""
+    sentences = re.split(r'(?<=[.!?。！？])\s+', text.strip())
     chunks: list[str] = []
     current = ""
     for sentence in sentences:
@@ -113,6 +111,65 @@ def split_text(text: str, limit: int = 2500) -> list[str]:
     if current:
         chunks.append(current)
     return chunks
+
+
+async def synthesize_chunk(part: str, payload: SpeechRequest) -> bytes:
+    """Generate one chunk and return its MP3 frames."""
+    communicate = edge_tts.Communicate(
+        part, payload.voice,
+        rate=payload.rate, pitch=payload.pitch, volume=payload.volume,
+    )
+    audio = bytearray()
+    async for item in communicate.stream():
+        if item.get("type") == "audio":
+            audio.extend(item.get("data", b""))
+    if not audio:
+        raise RuntimeError("The speech engine returned an empty audio chunk.")
+    return bytes(audio)
+
+
+@app.post("/api/tts")
+async def text_to_speech(payload: SpeechRequest):
+    try:
+        available = await edge_tts.list_voices()
+        if not any(item.get("ShortName") == payload.voice for item in available):
+            raise HTTPException(status_code=400, detail="Selected voice is not in the current Edge TTS catalogue.")
+
+        parts = split_text(payload.text)
+        # A small concurrency pool makes long scripts noticeably faster while
+        # keeping request pressure moderate. gather() preserves chunk order.
+        semaphore = asyncio.Semaphore(4)
+
+        async def limited_synthesis(part: str) -> bytes:
+            async with semaphore:
+                return await synthesize_chunk(part, payload)
+
+        audio_chunks = await asyncio.gather(
+            *(limited_synthesis(part) for part in parts)
+        )
+
+        temp = tempfile.NamedTemporaryFile(prefix="voiceforge_", suffix=".mp3", delete=False)
+        temp_path = Path(temp.name)
+        try:
+            with temp:
+                for audio in audio_chunks:
+                    temp.write(audio)
+            if temp_path.stat().st_size == 0:
+                raise RuntimeError("The speech engine returned an empty audio file.")
+            return FileResponse(
+                path=temp_path,
+                media_type="audio/mpeg",
+                filename="voiceforge-audio.mp3",
+                background=BackgroundTask(lambda: temp_path.unlink(missing_ok=True)),
+                headers={"Cache-Control": "no-store"},
+            )
+        except Exception:
+            temp_path.unlink(missing_ok=True)
+            raise
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Speech generation failed: {exc}") from exc
 
 
 @app.post("/api/tts")
