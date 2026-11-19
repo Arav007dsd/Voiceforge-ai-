@@ -45,7 +45,8 @@
             "x64"
           ]
         }
-      ]
+      ],
+      "artifactName": "VoiceForge-Setup.exe"
     },
     "nsis": {
       "oneClick": false,
