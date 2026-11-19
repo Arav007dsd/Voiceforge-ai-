@@ -9,6 +9,7 @@ const nav = [{id:'studio',label:'Studio',icon:AudioLines},{id:'voices',label:'Vo
 const initialText = "Welcome to VoiceForge AI. Turn your words into natural-sounding speech with a voice that brings your ideas to life."
 
 function App(){
+ useEffect(()=>{if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});const handler=e=>{e.preventDefault();window.deferredInstallPrompt=e};window.addEventListener('beforeinstallprompt',handler);return()=>window.removeEventListener('beforeinstallprompt',handler)},[])
  const [page,setPage]=useState('studio'),[mobile,setMobile]=useState(false)
  const [text,setText]=useState(initialText),[voices,setVoices]=useState([]),[voice,setVoice]=useState('en-US-AriaNeural')
  const [rate,setRate]=useState(0),[pitch,setPitch]=useState(0),[volume,setVolume]=useState(0)
