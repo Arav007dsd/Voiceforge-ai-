@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { AudioLines, Sparkles, Mic2, Library, History, Settings, Info, Search, Play, Pause, Download, Copy, Trash2, WandSparkles, Menu, X, ChevronDown, Volume2, Clock3, CheckCircle2, AlertCircle, LoaderCircle, Plus, SlidersHorizontal } from 'lucide-react'
 import './index.css'
 
-const API = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000').replace(/\/$/, '')
+const API = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
 const MAX = 5000
 const nav = [{id:'studio',label:'Studio',icon:AudioLines},{id:'voices',label:'Voice Library',icon:Library},{id:'history',label:'History',icon:History},{id:'settings',label:'Settings',icon:Settings},{id:'about',label:'About',icon:Info}]
 const initialText = "Welcome to VoiceForge AI. Turn your words into natural-sounding speech with a voice that brings your ideas to life."
